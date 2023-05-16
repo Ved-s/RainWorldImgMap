@@ -98,7 +98,7 @@ function frame() {
     context.fillStyle = "yellow";
     context.fillText(`Objects: ${objects?.length ?? "None"}`, 10, 10);
     context.fillText(`Layers: ${layers?.length ?? "None"}`, 10, 20);
-    context.fillText(`Trans: ${translationX}, ${translationY}`, 10, 30);
+    context.fillText(`Transform: ${translationX}, ${translationY}`, 10, 30);
     context.fillText(`Scale: ${scale}, acc ${scrollAcc}`, 10, 40);
 }
 
@@ -152,9 +152,6 @@ function onMouseWheel(e: WheelEvent) {
 }
 
 window.addEventListener("mousemove", (e: MouseEvent) => {
-    //dbgX = e.offsetX;
-    //dbgY = e.offsetY;
-
     if ((e.buttons & 1) != 0) {
         translationX += e.movementX / scale;
         translationY += e.movementY / scale;
