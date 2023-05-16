@@ -34,17 +34,15 @@ jobs:
       - name: Install tsc
         shell: sh
         run: npm install -g typescript
-        
+
       - name: Compile Typescript
         shell: sh
         run: tsc
 
       - name: Package artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-pages-artifact@v1
         with:
-          name: github-pages
           path: build/
-          retention-days: 1
 
   deploy:
 
@@ -61,8 +59,6 @@ jobs:
 
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-
       - name: Setup Pages
         uses: actions/configure-pages@v3
 
