@@ -30,9 +30,14 @@ jobs:
           mkdir build
           cp -r static/* build/
           cp -r maps build/
-          
+
+      - name: Install tsc
+        shell: sh
+        run: npm install -g typescript
+        
       - name: Compile Typescript
-        uses: icrawl/action-tsc@v1
+        shell: sh
+        run: tsc
 
       - name: Package artifact
         uses: actions/upload-artifact@v3
@@ -40,8 +45,12 @@ jobs:
           name: github-pages
           path: build/
           retention-days: 1
-          
+
   deploy:
+
+    needs:
+      build
+
     permissions:
       pages: write
       id-token: write
