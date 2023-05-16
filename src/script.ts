@@ -113,7 +113,7 @@ function frameHandler()
 
 async function asyncLoad() 
 {
-    let res = await fetch("/maps/main.json");
+    let res = await fetch("maps/main.json");
     let map = await res.json() as SerializedImageMap;
 
     objects = map.objects.map(o => new MapObject(o));
