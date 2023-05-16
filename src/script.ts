@@ -72,7 +72,7 @@ class SerializedImageMap {
 function frame() {
     context.resetTransform();
 
-    context.fillStyle = "cornflowerBlue";
+    context.fillStyle = "rgb(40, 40, 40)";
     context.fillRect(0, 0, canvas.width, canvas.height);
 
     context.scale(scale, scale);
@@ -123,14 +123,36 @@ async function asyncLoad() {
 
     translationX = (canvas.width - map.dimensions.width * scale) / 2 / scale;
     translationY = (canvas.height - map.dimensions.height * scale) / 2 / scale;
+
+    let layershtml = document.getElementById("layers-content")!;
+    for (let i = layers.length-1; i >= 0; i--) {
+        let layer = layers[i];
+        let li = document.createElement("li");
+
+        let checkbox = document.createElement("input");
+        checkbox.type = "checkbox";
+        checkbox.checked = layer.visible;
+        checkbox.className = "layer"
+        checkbox.onclick = () => {
+            layer.visible = checkbox.checked;
+        }
+
+        li.appendChild(checkbox);
+
+        let name = document.createElement("span");
+        name.innerText = layer.name;
+        
+        name.className = "layer-text"
+        li.appendChild(name);
+
+        layershtml.appendChild(li);
+    }
+    console.log(layershtml);
 }
 
 function onMouseWheel(e: WheelEvent) {
     // cross-browser wheel delta
     e = (window.event || e) as WheelEvent; // old IE support
-
-    console.log(e);
-
     var delta = Math.max(-1, Math.min(1, ((e as any).wheelDelta || -e.detail)));
 
     let mouseX = e.offsetX;
@@ -155,6 +177,7 @@ window.addEventListener("mousemove", (e: MouseEvent) => {
     if ((e.buttons & 1) != 0) {
         translationX += e.movementX / scale;
         translationY += e.movementY / scale;
+        e.stopPropagation();
     }
 });
 
@@ -174,7 +197,7 @@ window.addEventListener("DOMContentLoaded", (e) => {
     canvas.height = canvas.clientHeight;
 
     // https://stackoverflow.com/a/26067800
-    let elm = canvas as any;
+    let elm = window as any;
     if (elm.addEventListener) {
         // IE9, Chrome, Safari, Opera
         elm.addEventListener("mousewheel", onMouseWheel, false);
