@@ -1,63 +1,75 @@
 var context: CanvasRenderingContext2D;
 var canvas: HTMLCanvasElement;
 var objects: MapObject[] | null = null;
+var layers: ImageMapLayer[] | null = null;
 
 var translationX = 0;
 var translationY = 0;
 var scale = 1;
 var scrollAcc = 0;
 
-class MapObject 
-{
-    image: HTMLImageElement | null = null;
-    shade: HTMLImageElement | null = null;
-    pos: Position;
-
-    constructor (data: ImageMapObject) 
-    {
-        this.pos = data.pos;
-        if (data.image)
-        {
-            this.image = new Image();
-            this.image.src = "data:image/png;base64," + data.image;
-        }
-        if (data.shade)
-        {
-            this.shade = new Image();
-            this.shade.src = "data:image/png;base64," + data.shade;
-        }
-    }
-}
-
-class ImageMapDimensions 
-{
-    top = 0;
-    left = 0;
-    bottom = 0;
-    right = 0;
-}
-
-class Position 
-{
+class Position {
     x = 0;
     y = 0;
 }
 
-class ImageMapObject 
-{
-    image: string | null = null;
-    shade: string | null = null;
-    pos: Position = null!;
+class PositionedImage {
+    image: HTMLImageElement;
+    pos: Position;
+
+    constructor(image: string, pos: Position) {
+        this.image = new Image();
+        this.image.src = "data:image/png;base64," + image;
+        this.pos = pos;
+    }
 }
 
-class SerializedImageMap 
-{
+class MapObject {
+    image: PositionedImage | null = null;
+    shade: PositionedImage | null = null;
+
+    layer: string = null!;
+
+    constructor(data: ImageMapObject) {
+
+        this.layer = data.layer;
+        if (data.image && data.pos)
+            this.image = new PositionedImage(data.image, data.pos);
+        
+        if (data.shade && data.shade_pos)
+            this.shade = new PositionedImage(data.shade, data.shade_pos);
+    }
+}
+
+class ImageMapDimensions {
+    width = 0;
+    height = 0;
+}
+
+class ImageMapLayer {
+    id: string = null!;
+    name: string = null!;
+    visible: boolean = true;
+}
+
+class ImageMapObject {
+
+    layer: string = null!;
+
+    image: string | null = null;
+    pos: Position | null = null;
+
+    shade: string | null = null;
+    shade_pos: Position | null = null;
+}
+
+class SerializedImageMap {
     dimensions: ImageMapDimensions = null!;
+    layers: ImageMapLayer[] = null!;
     objects: ImageMapObject[] = null!;
 }
 
-function frame() 
-{
+function frame() {
     context.resetTransform();
 
     context.fillStyle = "cornflowerBlue";
@@ -66,61 +78,54 @@ function frame()
     context.scale(scale, scale);
     context.translate(translationX, translationY);
 
-    if (objects)
-    {
+    if (objects && layers) {
         context.imageSmoothingEnabled = false;
-        for (const obj of objects)
-        {
-            if (obj.shade)
-            {
-                let ox = 0;
-                let oy = 0;
+        for (const layer of layers)
+            if (layer.visible)
+                for (const obj of objects)
+                    if (obj.layer == layer.id && obj.shade)
+                        context.drawImage(obj.shade.image, obj.shade.pos.x, obj.shade.pos.y);
 
-                if (obj.image)
-                {
-                    ox = (obj.shade.width  - obj.image.width) / 2;
-                    oy = (obj.shade.height - obj.image.height) / 2;
-                }
-
-                context.drawImage(obj.shade, obj.pos.x - ox, obj.pos.y - oy);
-            }
-        }
-
-        for (const obj of objects)
-        {
-            if (obj.image)
-            {
-                context.drawImage(obj.image, obj.pos.x, obj.pos.y);
-
-                context.lineWidth = 1/scale;
-                context.strokeStyle = "lime";
-                context.strokeRect(obj.pos.x, obj.pos.y, obj.image.width, obj.image.height);
-            }
-        }
+        for (const layer of layers)
+            if (layer.visible)
+                for (const obj of objects)
+                    if (obj.layer == layer.id && obj.image)
+                        context.drawImage(obj.image.image, obj.image.pos.x, obj.image.pos.y);
     }
 
     context.resetTransform();
 
     context.fillStyle = "yellow";
     context.fillText(`Objects: ${objects?.length ?? "None"}`, 10, 10);
+    context.fillText(`Layers: ${layers?.length ?? "None"}`, 10, 20);
+    context.fillText(`Trans: ${translationX}, ${translationY}`, 10, 30);
+    context.fillText(`Scale: ${scale}, acc ${scrollAcc}`, 10, 40);
 }
 
-function frameHandler() 
-{
+function frameHandler() {
     frame();
     window.requestAnimationFrame(frameHandler);
 }
 
-async function asyncLoad() 
-{
+async function asyncLoad() {
     let res = await fetch("maps/main.json");
     let map = await res.json() as SerializedImageMap;
 
     objects = map.objects.map(o => new MapObject(o));
+    layers = map.layers;
+
+    let scaleX = canvas.width / map.dimensions.width;
+    let scaleY = canvas.height / map.dimensions.height;
+    scale = Math.min(scaleX, scaleY);
+
+    // Inverse if the formula used to calculate scale from scroll
+    scrollAcc = scale < 1 ? Math.floor((scale - 1) / (scale * 0.2)) : Math.ceil(5 * scale - 5);
+
+    translationX = (canvas.width - map.dimensions.width * scale) / 2 / scale;
+    translationY = (canvas.height - map.dimensions.height * scale) / 2 / scale;
 }
 
-function onMouseWheel(e: WheelEvent)
-{
+function onMouseWheel(e: WheelEvent) {
     // cross-browser wheel delta
     e = (window.event || e) as WheelEvent; // old IE support
 
@@ -146,29 +151,24 @@ function onMouseWheel(e: WheelEvent)
     return false;
 }
 
-window.addEventListener("mousemove", (e: MouseEvent) => 
-{
+window.addEventListener("mousemove", (e: MouseEvent) => {
     //dbgX = e.offsetX;
     //dbgY = e.offsetY;
 
-    if ((e.buttons & 1) != 0)
-    {
+    if ((e.buttons & 1) != 0) {
         translationX += e.movementX / scale;
         translationY += e.movementY / scale;
     }
 });
 
-window.addEventListener("resize", (e) => 
-{
-    if (canvas)
-    {
+window.addEventListener("resize", (e) => {
+    if (canvas) {
         canvas.width = canvas.clientWidth;
         canvas.height = canvas.clientHeight;
     }
 });
 
-window.addEventListener("DOMContentLoaded", (e) => 
-{
+window.addEventListener("DOMContentLoaded", (e) => {
     asyncLoad();
     canvas = document.getElementById("maincanvas") as HTMLCanvasElement;
     context = canvas.getContext("2d") as CanvasRenderingContext2D;
@@ -178,16 +178,14 @@ window.addEventListener("DOMContentLoaded", (e) =>
 
     // https://stackoverflow.com/a/26067800
     let elm = canvas as any;
-    if (elm.addEventListener)
-    {
+    if (elm.addEventListener) {
         // IE9, Chrome, Safari, Opera
         elm.addEventListener("mousewheel", onMouseWheel, false);
         // Firefox
         elm.addEventListener("DOMMouseScroll", onMouseWheel, false);
     }
     // IE 6/7/8
-    else
-    {
+    else {
         elm.attachEvent("onmousewheel", onMouseWheel);
     }
 
