@@ -9,16 +9,18 @@ on:
   workflow_dispatch:
 
 jobs:
-  #build:
-  #  
-  #  runs-on: ubuntu-latest
-  #  
-  #  steps:
-  #    - uses: actions/checkout@v3
-  #    
-  #    - name: Run a one-line script
-  #      run: echo Hello, world!z
-
+  build:
+    
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Package
+        uses: actions/upload-artifact@v3
+        with:
+            name: github-pages
+            path: wwwroot/
   deploy:
     permissions:
       pages: write
@@ -30,12 +32,6 @@ jobs:
 
     runs-on: ubuntu-latest
     steps:
-      - name: Package pages
-        uses: actions/upload-artifact@v3
-        with:
-            name: github-pages
-            path: wwwroot/
-
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v2
